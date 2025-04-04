@@ -27,7 +27,7 @@ type PluginInterface interface {
 
 type GetOutputResponse struct {
 	Output map[string]interface{}
-	Error  string // We'll use this to transport the error
+	Error  error // We'll use this to transport the error
 }
 
 // ###################Client####################
