@@ -20,9 +20,9 @@ type Plugin struct {
 }
 type PluginInterface interface {
 	ParseConfig(in map[string]any) error
-	SetupPlugin() error
-	GetOutput() GetOutputResponse
-	Destroy() error
+	SetupPlugin(config map[string] any) error
+	GetOutput(config map[string] any) GetOutputResponse
+	Destroy(config map[string] any) error
 }
 
 type GetOutputResponse struct {
@@ -44,27 +44,27 @@ func (c *PluginRPC) ParseConfig(in map[string]interface{}) error{
 	return resp
 }
 
-func (c *PluginRPC) SetupPlugin() error{
+func (c *PluginRPC) SetupPlugin(config map[string] any) error{
 	var resp error
-	err := c.client.Call("Plugin.SetupPlugin", new(any), &resp)
+	err := c.client.Call("Plugin.SetupPlugin", config, &resp)
 	if err != nil {
 		log.Fatal(err)
 	}
 	return resp
 }
 
-func (c *PluginRPC) GetOutput() GetOutputResponse{
+func (c *PluginRPC) GetOutput(config map[string] any) GetOutputResponse{
 	var resp GetOutputResponse
-	err := c.client.Call("Plugin.GetOutput", new(any), &resp)
+	err := c.client.Call("Plugin.GetOutput", config, &resp)
 	if err != nil {
 		log.Fatal(err)
 	}
 	return resp
 }
 
-func (c *PluginRPC) Destroy() error{
+func (c *PluginRPC) Destroy(config map[string] any) error{
 	var resp error
-	err := c.client.Call("Plugin.Destroy", new(any), &resp)
+	err := c.client.Call("Plugin.Destroy", config, &resp)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -82,18 +82,18 @@ func (s *PluginRPCServer) ParseConfig(args map[string]interface{}, resp *error) 
 	return nil
 }
 
-func (s *PluginRPCServer) SetupPlugin(args any, resp *error) error{
-	*resp = s.Impl.SetupPlugin()
+func (s *PluginRPCServer) SetupPlugin(args map[string]interface{}, resp *error) error{
+	*resp = s.Impl.SetupPlugin(args)
 	return nil
 }
 
-func (s *PluginRPCServer) GetOutput(args any, resp *GetOutputResponse) error{
-	*resp = s.Impl.GetOutput()
+func (s *PluginRPCServer) GetOutput(args map[string]interface{}, resp *GetOutputResponse) error{
+	*resp = s.Impl.GetOutput(args)
 	return nil
 }
 
-func (s *PluginRPCServer) Destroy(args any, resp *error) error{
-	*resp = s.Impl.Destroy()
+func (s *PluginRPCServer) Destroy(args map[string]interface{}, resp *error) error{
+	*resp = s.Impl.Destroy(args)
 	return nil
 }
 
