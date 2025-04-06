@@ -64,7 +64,7 @@ func (c *PluginRPC) GetOutput() GetOutputResponse{
 
 func (c *PluginRPC) Destroy() error{
 	var resp error
-	err := c.client.Call("Plugin.SetupPlugin", new(any), &resp)
+	err := c.client.Call("Plugin.Destroy", new(any), &resp)
 	if err != nil {
 		log.Fatal(err)
 	}
