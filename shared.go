@@ -8,15 +8,17 @@ import (
 )
 
 type PluginStruct struct {
-	Type string `yaml:"type"`
-	Name string `yaml:"name"`
-	Plugin Plugin `yaml:"plugin"`
+	ID string `yaml:"id" json:"id"`
+	RepoUrl string `yaml:"repo_url" json:"repo_url"`
+	Version string `yaml:"version" json:"version"`
+	Label string `yaml:"label" json:"label"`
+	Plugin Plugin `yaml:"plugin" json:"plugin"`
 }
 
 type Plugin struct {
   // You can redefine your Config or Output 
-	Config map[string]any `yaml:"config"`
-	Output map[string]any `yaml:"output"`
+	Config map[string]any `yaml:"config" json:"config"`
+	Output map[string]any `yaml:"output" json:"output"`
 }
 type PluginInterface interface {
 	ParseConfig(in map[string]any) error
