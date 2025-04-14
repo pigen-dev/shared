@@ -2,8 +2,6 @@ package pluginshared
 
 import (
 	"encoding/gob"
-	"errors"
-	"fmt"
 	"net/rpc"
 
 	"github.com/hashicorp/go-plugin"
