@@ -1,7 +1,6 @@
 package pluginshared
 
 import (
-	"log"
 	"net/rpc"
 
 	"github.com/hashicorp/go-plugin"
