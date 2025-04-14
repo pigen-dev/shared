@@ -31,22 +31,19 @@ type PluginInterface interface {
 
 type GetOutputResponse struct {
 	Output map[string]interface{}
-	Error  error // We'll use this to transport the error
+	Error  *PluginError // We'll use this to transport the error
 }
 
-// ################### Register Error Types #####################
+type PluginError struct {
+	Message string
+}
+
+func (e *PluginError) Error() string {
+	return e.Message
+}
+
 func init() {
-	// Register the basic error type returned by errors.New and fmt.Errorf (without %w)
-	gob.Register(errors.New(""))
-
-	// OPTIONAL BUT RECOMMENDED: If plugins might put wrapped errors into
-	// GetOutputResponse.Error using fmt.Errorf("... %w", someError)
-	// var dummyWrappedError error = fmt.Errorf("wrap: %w", errors.New("inner"))
-	// gob.Register(dummyWrappedError)
-
-	// Register any custom error types defined in this package (if any)
-	// that might be assigned to GetOutputResponse.Error
-	// gob.Register(&MySharedErrorType{})
+	gob.Register(&PluginError{})
 }
 
 // ###################Client####################
@@ -58,7 +55,7 @@ func (c *PluginRPC) ParseConfig(in map[string]interface{}) error{
 	var resp error
 	err := c.client.Call("Plugin.ParseConfig", in, &resp)
 	if err != nil {
-		return fmt.Errorf("rpc call Plugin.ParseConfig failed: %w", err)
+		return &PluginError{Message: err.Error()}
 	}
 	return resp
 }
@@ -67,7 +64,7 @@ func (c *PluginRPC) SetupPlugin() error{
 	var resp error
 	err := c.client.Call("Plugin.SetupPlugin", new(any), &resp)
 	if err != nil {
-		return fmt.Errorf("rpc call Plugin.SetupPlugin failed: %w", err)
+		return &PluginError{Message: err.Error()}
 	}
 	return resp
 }
@@ -76,7 +73,7 @@ func (c *PluginRPC) GetOutput() GetOutputResponse{
 	var resp GetOutputResponse
 	err := c.client.Call("Plugin.GetOutput", new(any), &resp)
 	if err != nil {
-		return GetOutputResponse{Output: nil, Error: fmt.Errorf("rpc communication error getting output: %w", err),}
+		return GetOutputResponse{Output: nil, Error: &PluginError{Message: err.Error()},}
 	}
 	return resp
 }
@@ -85,7 +82,7 @@ func (c *PluginRPC) Destroy() error{
 	var resp error
 	err := c.client.Call("Plugin.Destroy", new(any), &resp)
 	if err != nil {
-		return fmt.Errorf("rpc call Plugin.Destroy failed: %w", err)
+		return &PluginError{Message: err.Error()}
 	}
 	return resp
 }
