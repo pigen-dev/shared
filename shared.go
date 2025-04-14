@@ -41,7 +41,7 @@ func (c *PluginRPC) ParseConfig(in map[string]interface{}) error{
 	var resp error
 	err := c.client.Call("Plugin.ParseConfig", in, &resp)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	return resp
 }
@@ -50,7 +50,7 @@ func (c *PluginRPC) SetupPlugin() error{
 	var resp error
 	err := c.client.Call("Plugin.SetupPlugin", new(any), &resp)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	return resp
 }
@@ -59,7 +59,7 @@ func (c *PluginRPC) GetOutput() GetOutputResponse{
 	var resp GetOutputResponse
 	err := c.client.Call("Plugin.GetOutput", new(any), &resp)
 	if err != nil {
-		log.Fatal(err)
+		return GetOutputResponse{Output: nil, Error: err}
 	}
 	return resp
 }
@@ -68,7 +68,7 @@ func (c *PluginRPC) Destroy() error{
 	var resp error
 	err := c.client.Call("Plugin.Destroy", new(any), &resp)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	return resp
 }
