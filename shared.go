@@ -50,7 +50,7 @@ type PluginRPC struct{
 }
 
 func (c *PluginRPC) ParseConfig(in map[string]interface{}) error{
-	var resp error
+	var resp *PluginError
 	err := c.client.Call("Plugin.ParseConfig", in, &resp)
 	if err != nil {
 		return &PluginError{Message: err.Error()}
@@ -59,7 +59,7 @@ func (c *PluginRPC) ParseConfig(in map[string]interface{}) error{
 }
 
 func (c *PluginRPC) SetupPlugin() error{
-	var resp error
+	var resp *PluginError
 	err := c.client.Call("Plugin.SetupPlugin", new(any), &resp)
 	if err != nil {
 		return &PluginError{Message: err.Error()}
@@ -77,7 +77,7 @@ func (c *PluginRPC) GetOutput() GetOutputResponse{
 }
 
 func (c *PluginRPC) Destroy() error{
-	var resp error
+	var resp *PluginError
 	err := c.client.Call("Plugin.Destroy", new(any), &resp)
 	if err != nil {
 		return &PluginError{Message: err.Error()}
@@ -91,13 +91,29 @@ type PluginRPCServer struct{
 	Impl PluginInterface
 }
 
-func (s *PluginRPCServer) ParseConfig(args map[string]interface{}, resp *error) error{
-	*resp = s.Impl.ParseConfig(args)
+func (s *PluginRPCServer) ParseConfig(args map[string]interface{}, resp **PluginError) error{
+	err := s.Impl.ParseConfig(args)
+	if err != nil {
+			// Convert any error to PluginError
+			if pe, ok := err.(*PluginError); ok {
+					*resp = pe
+			} else {
+					*resp = &PluginError{Message: err.Error()}
+			}
+	}
 	return nil
 }
 
-func (s *PluginRPCServer) SetupPlugin(args any, resp *error) error{
-	*resp = s.Impl.SetupPlugin()
+func (s *PluginRPCServer) SetupPlugin(args any, resp **PluginError) error{
+	err := s.Impl.SetupPlugin()
+	if err != nil {
+			// Convert any error to PluginError
+			if pe, ok := err.(*PluginError); ok {
+					*resp = pe
+			} else {
+					*resp = &PluginError{Message: err.Error()}
+			}
+	}
 	return nil
 }
 
@@ -106,9 +122,17 @@ func (s *PluginRPCServer) GetOutput(args any, resp *GetOutputResponse) error{
 	return nil
 }
 
-func (s *PluginRPCServer) Destroy(args any, resp *error) error{
-	*resp = s.Impl.Destroy()
-	return nil
+func (s *PluginRPCServer) Destroy(args any, resp **PluginError) error{
+	err := s.Impl.Destroy()
+    if err != nil {
+        // Convert any error to PluginError
+        if pe, ok := err.(*PluginError); ok {
+            *resp = pe
+        } else {
+            *resp = &PluginError{Message: err.Error()}
+        }
+    }
+    return nil
 }
 
 type PigenPlugin struct{
