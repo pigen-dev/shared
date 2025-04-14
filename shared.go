@@ -3,6 +3,7 @@ package pluginshared
 import (
 	"encoding/gob"
 	"errors"
+	"fmt"
 	"net/rpc"
 
 	"github.com/hashicorp/go-plugin"
@@ -57,7 +58,7 @@ func (c *PluginRPC) ParseConfig(in map[string]interface{}) error{
 	var resp error
 	err := c.client.Call("Plugin.ParseConfig", in, &resp)
 	if err != nil {
-		return err
+		return fmt.Errorf("rpc call Plugin.ParseConfig failed: %w", err)
 	}
 	return resp
 }
@@ -66,7 +67,7 @@ func (c *PluginRPC) SetupPlugin() error{
 	var resp error
 	err := c.client.Call("Plugin.SetupPlugin", new(any), &resp)
 	if err != nil {
-		return err
+		return fmt.Errorf("rpc call Plugin.SetupPlugin failed: %w", err)
 	}
 	return resp
 }
@@ -75,7 +76,7 @@ func (c *PluginRPC) GetOutput() GetOutputResponse{
 	var resp GetOutputResponse
 	err := c.client.Call("Plugin.GetOutput", new(any), &resp)
 	if err != nil {
-		return GetOutputResponse{Output: nil, Error: err}
+		return GetOutputResponse{Output: nil, Error: fmt.Errorf("rpc communication error getting output: %w", err),}
 	}
 	return resp
 }
@@ -84,7 +85,7 @@ func (c *PluginRPC) Destroy() error{
 	var resp error
 	err := c.client.Call("Plugin.Destroy", new(any), &resp)
 	if err != nil {
-		return err
+		return fmt.Errorf("rpc call Plugin.Destroy failed: %w", err)
 	}
 	return resp
 }
