@@ -1,6 +1,8 @@
 package pluginshared
 
 import (
+	"encoding/gob"
+	"errors"
 	"net/rpc"
 
 	"github.com/hashicorp/go-plugin"
@@ -29,6 +31,21 @@ type PluginInterface interface {
 type GetOutputResponse struct {
 	Output map[string]interface{}
 	Error  error // We'll use this to transport the error
+}
+
+// ################### Register Error Types #####################
+func init() {
+	// Register the basic error type returned by errors.New and fmt.Errorf (without %w)
+	gob.Register(errors.New(""))
+
+	// OPTIONAL BUT RECOMMENDED: If plugins might put wrapped errors into
+	// GetOutputResponse.Error using fmt.Errorf("... %w", someError)
+	// var dummyWrappedError error = fmt.Errorf("wrap: %w", errors.New("inner"))
+	// gob.Register(dummyWrappedError)
+
+	// Register any custom error types defined in this package (if any)
+	// that might be assigned to GetOutputResponse.Error
+	// gob.Register(&MySharedErrorType{})
 }
 
 // ###################Client####################
