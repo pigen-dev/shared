@@ -2,6 +2,8 @@ package pluginshared
 
 import (
 	"encoding/gob"
+	"encoding/json"
+	"fmt"
 	"net/rpc"
 
 	"github.com/hashicorp/go-plugin"
@@ -29,7 +31,13 @@ type PluginInterface interface {
 
 type GetOutputResponse struct {
 	Output map[string]interface{}
-	Error  error // We'll use this to transport the error
+	Error  error
+}
+
+// Add a transport-specific structure for RPC communication
+type GetOutputRPCResponse struct {
+	OutputJSON string // JSON-encoded output map
+	ErrorJSON  string // JSON-encoded error message (empty if no error)
 }
 
 type CustomError struct {
@@ -49,6 +57,7 @@ func NewError(message string) *CustomError {
 func init() {
 	gob.Register(&CustomError{})
 	gob.Register(&GetOutputResponse{})
+	gob.Register(GetOutputRPCResponse{})
 }
 
 // ###################Client####################
@@ -75,12 +84,22 @@ func (c *PluginRPC) SetupPlugin() error{
 }
 
 func (c *PluginRPC) GetOutput() GetOutputResponse{
-	var resp GetOutputResponse
-	err := c.client.Call("Plugin.GetOutput", new(any), &resp)
+	var rpcResp GetOutputRPCResponse
+	err := c.client.Call("Plugin.GetOutput", new(any), &rpcResp)
+	var outputMap map[string]interface{}
+  var outputErr error
 	if err != nil {
-		return GetOutputResponse{Output: nil, Error: err}
+		outputErr = NewError(err.Error())
+	} else {
+		if rpcResp.ErrorJSON != "" {
+			outputErr = NewError(rpcResp.ErrorJSON)
+		} else {
+			if err := json.Unmarshal([]byte(rpcResp.OutputJSON), &outputMap); err != nil {
+				outputErr = NewError(err.Error())
+			}
+		}
 	}
-	return resp
+	return GetOutputResponse{Output: outputMap, Error: outputErr}
 }
 
 func (c *PluginRPC) Destroy() error{
@@ -118,13 +137,27 @@ func (s *PluginRPCServer) SetupPlugin(args any, resp *error) error{
 	return nil
 }
 
-func (s *PluginRPCServer) GetOutput(args any, resp *GetOutputResponse) error{
-	output := s.Impl.GetOutput()
-	if output.Error != nil {
-		*resp = GetOutputResponse{Output: nil, Error: NewError(output.Error.Error())}
+func (s *PluginRPCServer) GetOutput(args any, resp *GetOutputRPCResponse) error{
+	result := s.Impl.GetOutput()
+	if result.Output != nil {
+		jsonData, err := json.Marshal(result.Output)
+		if err != nil {
+				resp.OutputJSON = "{}"
+				resp.ErrorJSON = fmt.Sprintf(`{"message":"JSON serialization error: %s"}`, err.Error())
+				return nil
+		}
+		resp.OutputJSON = string(jsonData)
 	} else {
-		*resp = output
+			resp.OutputJSON = "{}"
 	}
+
+	// Serialize any error to JSON
+	if result.Error != nil {
+			resp.ErrorJSON = fmt.Sprintf(`{"message":"%s"}`, result.Error.Error())
+	} else {
+			resp.ErrorJSON = ""
+	}
+
 	return nil
 }
 
