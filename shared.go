@@ -23,14 +23,13 @@ type Plugin struct {
 	Output map[string]any `yaml:"output" json:"output"`
 }
 type PluginInterface interface {
-	ParseConfig(in map[string]any) error
-	SetupPlugin() error
-	GetOutput() GetOutputResponse
-	Destroy() error
+	SetupPlugin(in map[string]any) error
+	GetOutput(in map[string]any) GetOutputResponse
+	Destroy(in map[string]any) error
 }
 
 type GetOutputResponse struct {
-	Output map[string]interface{}
+	Output map[string]any
 	Error  error
 }
 
@@ -65,28 +64,19 @@ type PluginRPC struct{
 	client *rpc.Client
 }
 
-func (c *PluginRPC) ParseConfig(in map[string]interface{}) error{
+func (c *PluginRPC) SetupPlugin(in map[string]any) error{
 	var resp error
-	err := c.client.Call("Plugin.ParseConfig", in, &resp)
+	err := c.client.Call("Plugin.SetupPlugin", in, &resp)
 	if err != nil {
 		return err
 	}
 	return resp
 }
 
-func (c *PluginRPC) SetupPlugin() error{
-	var resp error
-	err := c.client.Call("Plugin.SetupPlugin", new(any), &resp)
-	if err != nil {
-		return err
-	}
-	return resp
-}
-
-func (c *PluginRPC) GetOutput() GetOutputResponse{
+func (c *PluginRPC) GetOutput(in map[string]any) GetOutputResponse{
 	var rpcResp GetOutputRPCResponse
-	err := c.client.Call("Plugin.GetOutput", new(any), &rpcResp)
-	var outputMap map[string]interface{}
+	err := c.client.Call("Plugin.GetOutput", in, &rpcResp)
+	var outputMap map[string]any
   var outputErr error
 	if err != nil {
 		outputErr = NewError(err.Error())
@@ -102,9 +92,9 @@ func (c *PluginRPC) GetOutput() GetOutputResponse{
 	return GetOutputResponse{Output: outputMap, Error: outputErr}
 }
 
-func (c *PluginRPC) Destroy() error{
+func (c *PluginRPC) Destroy(in map[string]any) error{
 	var resp error
-	err := c.client.Call("Plugin.Destroy", new(any), &resp)
+	err := c.client.Call("Plugin.Destroy", in, &resp)
 	if err != nil {
 		return err
 	}
@@ -117,8 +107,9 @@ type PluginRPCServer struct{
 	Impl PluginInterface
 }
 
-func (s *PluginRPCServer) ParseConfig(args map[string]interface{}, resp *error) error{
-	err := s.Impl.ParseConfig(args)
+
+func (s *PluginRPCServer) SetupPlugin(args map[string]any, resp *error) error{
+	err := s.Impl.SetupPlugin(args)
 	if err != nil {
 		*resp = NewError(err.Error())
 	} else {
@@ -127,18 +118,8 @@ func (s *PluginRPCServer) ParseConfig(args map[string]interface{}, resp *error) 
 	return nil
 }
 
-func (s *PluginRPCServer) SetupPlugin(args any, resp *error) error{
-	err := s.Impl.SetupPlugin()
-	if err != nil {
-		*resp = NewError(err.Error())
-	} else {
-			*resp = nil
-	}
-	return nil
-}
-
-func (s *PluginRPCServer) GetOutput(args any, resp *GetOutputRPCResponse) error{
-	result := s.Impl.GetOutput()
+func (s *PluginRPCServer) GetOutput(args map[string]any, resp *GetOutputRPCResponse) error{
+	result := s.Impl.GetOutput(args)
 	if result.Output != nil {
 		jsonData, err := json.Marshal(result.Output)
 		if err != nil {
@@ -161,8 +142,8 @@ func (s *PluginRPCServer) GetOutput(args any, resp *GetOutputRPCResponse) error{
 	return nil
 }
 
-func (s *PluginRPCServer) Destroy(args any, resp *error) error{
-	err := s.Impl.Destroy()
+func (s *PluginRPCServer) Destroy(args map[string]any, resp *error) error{
+	err := s.Impl.Destroy(args)
 	if err != nil {
 		*resp = NewError(err.Error())
 	} else {
