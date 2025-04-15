@@ -1,6 +1,7 @@
 package pluginshared
 
 import (
+	"encoding/gob"
 	"net/rpc"
 
 	"github.com/hashicorp/go-plugin"
@@ -43,6 +44,10 @@ func (e *CustomError) Error() string {
 // NewError creates a new CustomError
 func NewError(message string) *CustomError {
 	return &CustomError{Message: message}
+}
+
+func init() {
+	gob.Register(&CustomError{})
 }
 
 // ###################Client####################
