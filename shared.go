@@ -31,6 +31,20 @@ type GetOutputResponse struct {
 	Error  error // We'll use this to transport the error
 }
 
+type CustomError struct {
+	Message string
+}
+
+// Error implements the error interface
+func (e *CustomError) Error() string {
+	return e.Message
+}
+
+// NewError creates a new CustomError
+func NewError(message string) *CustomError {
+	return &CustomError{Message: message}
+}
+
 // ###################Client####################
 type PluginRPC struct{
 	client *rpc.Client
@@ -79,12 +93,22 @@ type PluginRPCServer struct{
 }
 
 func (s *PluginRPCServer) ParseConfig(args map[string]interface{}, resp *error) error{
-	*resp = s.Impl.ParseConfig(args)
+	err := s.Impl.ParseConfig(args)
+	if err != nil {
+		*resp = NewError(err.Error())
+	} else {
+			*resp = nil
+	}
 	return nil
 }
 
 func (s *PluginRPCServer) SetupPlugin(args any, resp *error) error{
-	*resp = s.Impl.SetupPlugin()
+	err := s.Impl.SetupPlugin()
+	if err != nil {
+		*resp = NewError(err.Error())
+	} else {
+			*resp = nil
+	}
 	return nil
 }
 
@@ -94,7 +118,12 @@ func (s *PluginRPCServer) GetOutput(args any, resp *GetOutputResponse) error{
 }
 
 func (s *PluginRPCServer) Destroy(args any, resp *error) error{
-	*resp = s.Impl.Destroy()
+	err := s.Impl.Destroy()
+	if err != nil {
+		*resp = NewError(err.Error())
+	} else {
+			*resp = nil
+	}
 	return nil
 }
 
