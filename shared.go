@@ -108,7 +108,12 @@ func (s *PluginRPCServer) ParseConfig(args map[string]interface{}, resp *error) 
 }
 
 func (s *PluginRPCServer) SetupPlugin(args any, resp *error) error{
-	*resp = s.Impl.SetupPlugin()
+	err := s.Impl.SetupPlugin()
+	if err != nil {
+		*resp = NewError(err.Error())
+	} else {
+			*resp = nil
+	}
 	return nil
 }
 
