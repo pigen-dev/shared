@@ -37,7 +37,7 @@ type GetOutputResponse struct {
 // Add a transport-specific structure for RPC communication
 type GetOutputRPCResponse struct {
 	OutputJSON string // JSON-encoded output map
-	ErrorJSON  string // JSON-encoded error message (empty if no error)
+	Error  error
 }
 
 type CustomError struct {
@@ -91,8 +91,8 @@ func (c *PluginRPC) GetOutput() GetOutputResponse{
 	if err != nil {
 		outputErr = NewError(err.Error())
 	} else {
-		if rpcResp.ErrorJSON != "" {
-			outputErr = NewError(rpcResp.ErrorJSON)
+		if rpcResp.Error != nil {
+			outputErr = NewError(rpcResp.Error.Error())
 		} else {
 			if err := json.Unmarshal([]byte(rpcResp.OutputJSON), &outputMap); err != nil {
 				outputErr = NewError(err.Error())
@@ -143,7 +143,7 @@ func (s *PluginRPCServer) GetOutput(args any, resp *GetOutputRPCResponse) error{
 		jsonData, err := json.Marshal(result.Output)
 		if err != nil {
 				resp.OutputJSON = "{}"
-				resp.ErrorJSON = fmt.Sprintf(`{"message":"JSON serialization error: %s"}`, err.Error())
+				resp.Error = NewError(fmt.Errorf("failed to json marshal output: %w", err).Error())
 				return nil
 		}
 		resp.OutputJSON = string(jsonData)
@@ -153,9 +153,9 @@ func (s *PluginRPCServer) GetOutput(args any, resp *GetOutputRPCResponse) error{
 
 	// Serialize any error to JSON
 	if result.Error != nil {
-			resp.ErrorJSON = fmt.Sprintf(`{"message":"%s"}`, result.Error.Error())
+			resp.Error = NewError(result.Error.Error())
 	} else {
-			resp.ErrorJSON = ""
+			resp.Error = nil
 	}
 
 	return nil
