@@ -48,6 +48,7 @@ func NewError(message string) *CustomError {
 
 func init() {
 	gob.Register(&CustomError{})
+	gob.Register(&GetOutputResponse{})
 }
 
 // ###################Client####################
@@ -118,7 +119,12 @@ func (s *PluginRPCServer) SetupPlugin(args any, resp *error) error{
 }
 
 func (s *PluginRPCServer) GetOutput(args any, resp *GetOutputResponse) error{
-	*resp = s.Impl.GetOutput()
+	output := s.Impl.GetOutput()
+	if output.Error != nil {
+		*resp = GetOutputResponse{Output: nil, Error: NewError(output.Error.Error())}
+	} else {
+		*resp = output
+	}
 	return nil
 }
 
