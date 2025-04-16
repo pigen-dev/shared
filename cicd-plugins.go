@@ -1,6 +1,7 @@
 package pluginshared
 
 import (
+	"encoding/json"
 	"net/rpc"
 
 	"github.com/hashicorp/go-plugin"
@@ -41,7 +42,12 @@ type CicdRPC struct{
 
 func (c *CicdRPC) ConnectRepo(pigenStepsFile PigenStepsFile) error{
 	var resp error
-	err := c.client.Call("Plugin.ConnectRepo", pigenStepsFile, &resp)
+	// Convert the PigenStepsFile struct to JSON
+	pigenStepsFileJSON, err := json.Marshal(pigenStepsFile)
+	if err != nil {
+		return err
+	}
+	err = c.client.Call("Plugin.ConnectRepo", pigenStepsFileJSON, &resp)
 	if err != nil {
 		return err
 	}
@@ -72,7 +78,11 @@ type CicdRPCServer struct{
 }
 
 
-func (s *CicdRPCServer) ConnectRepo(pigenStepsFile PigenStepsFile, resp *error) error{
+func (s *CicdRPCServer) ConnectRepo(pigenStepsFileJSON string, resp *error) error{
+	var pigenStepsFile PigenStepsFile
+	if err := json.Unmarshal([]byte(pigenStepsFileJSON), &pigenStepsFile); err != nil {
+		*resp = NewError(err.Error())
+	}
 	err := s.Impl.ConnectRepo(pigenStepsFile)
 	if err != nil {
 		*resp = NewError(err.Error())
