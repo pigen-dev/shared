@@ -9,19 +9,28 @@ import (
 type CicdInterface interface {
 
 	// Connect the repo passed in pigen.yaml to the cicd tool
-	ConnectRepo(in map[string] interface{}) error
+	ConnectRepo(in map[string] any) error
 
 	// Create trigger on a repo branch
-	CreateTrigger(in map[string] interface{}) error
+	CreateTrigger(in map[string] any) error
 	
 	// Generate pipeline script
 
-	GeneratScript(in map[string] interface{}) error
+	GeneratScript(in map[string] any) error
 
 	//TODO: Return service account to give it access to deployed plugins
 }
 
+type PigenSteps struct {
+	Type string `yaml:"type" json:"type"`
+	Config map[string]any `yaml:"config" json:"config"`
+	Steps []Step `yaml:"steps" json:"steps"`
+}
 
+type Step struct {
+	Step string `yaml:"step" json:"step"`
+	Placeholders map[string]any `yaml:"placeholders" json:"placeholders"`
+}
 
 // ###################Client####################
 type CicdRPC struct{
