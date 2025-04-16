@@ -21,7 +21,7 @@ type CicdInterface interface {
 	//TODO: Return service account to give it access to deployed plugins
 }
 
-type Steps struct {
+type PigenSteps struct {
 	Type string `yaml:"type" json:"type"`
 	Config map[string]any `yaml:"config" json:"config"`
 	Steps []Step `yaml:"steps" json:"steps"`
