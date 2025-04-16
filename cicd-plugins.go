@@ -6,22 +6,7 @@ import (
 	"github.com/hashicorp/go-plugin"
 )
 
-type CicdInterface interface {
-
-	// Connect the repo passed in pigen.yaml to the cicd tool
-	ConnectRepo(in map[string] any) error
-
-	// Create trigger on a repo branch
-	CreateTrigger(in map[string] any) error
-	
-	// Generate pipeline script
-
-	GeneratScript(in map[string] any) error
-
-	//TODO: Return service account to give it access to deployed plugins
-}
-
-type PigenSteps struct {
+type PigenStepsFile struct {
 	Type string `yaml:"type" json:"type"`
 	Version string `yaml:"version" json:"version"`
 	RepoUrl string `yaml:"repo_url" json:"repo_url"`
@@ -34,32 +19,47 @@ type Step struct {
 	Placeholders map[string]any `yaml:"placeholders" json:"placeholders"`
 }
 
+type CicdInterface interface {
+
+	// Connect the repo passed in pigen.yaml to the cicd tool
+	ConnectRepo(pigenStepsFile PigenStepsFile) error
+
+	// Create trigger on a repo branch
+	CreateTrigger(pigenStepsFile PigenStepsFile) error
+	
+	// Generate pipeline script
+
+	GeneratScript(pigenStepsFile PigenStepsFile) error
+
+	//TODO: Return service account to give it access to deployed plugins
+}
+
 // ###################Client####################
 type CicdRPC struct{
 	client *rpc.Client
 }
 
-func (c *CicdRPC) ConnectRepo(in map[string]any) error{
+func (c *CicdRPC) ConnectRepo(pigenStepsFile PigenStepsFile) error{
 	var resp error
-	err := c.client.Call("Plugin.ConnectRepo", in, &resp)
+	err := c.client.Call("Plugin.ConnectRepo", pigenStepsFile, &resp)
 	if err != nil {
 		return err
 	}
 	return resp
 }
 
-func (c *CicdRPC) CreateTrigger(in map[string]any) error{
+func (c *CicdRPC) CreateTrigger(pigenStepsFile PigenStepsFile) error{
 	var resp error
-	err := c.client.Call("Plugin.CreateTrigger", in, &resp)
+	err := c.client.Call("Plugin.CreateTrigger", pigenStepsFile, &resp)
 	if err != nil {
 		return err
 	}
 	return resp
 }
 
-func (c *CicdRPC) GeneratScript(in map[string]any) error{
+func (c *CicdRPC) GeneratScript(pigenStepsFile PigenStepsFile) error{
 	var resp error
-	err := c.client.Call("Plugin.GeneratScript", in, &resp)
+	err := c.client.Call("Plugin.GeneratScript", pigenStepsFile, &resp)
 	if err != nil {
 		return err
 	}
@@ -72,8 +72,8 @@ type CicdRPCServer struct{
 }
 
 
-func (s *CicdRPCServer) ConnectRepo(args map[string]any, resp *error) error{
-	err := s.Impl.ConnectRepo(args)
+func (s *CicdRPCServer) ConnectRepo(pigenStepsFile PigenStepsFile, resp *error) error{
+	err := s.Impl.ConnectRepo(pigenStepsFile)
 	if err != nil {
 		*resp = NewError(err.Error())
 	} else {
@@ -82,8 +82,8 @@ func (s *CicdRPCServer) ConnectRepo(args map[string]any, resp *error) error{
 	return nil
 }
 
-func (s *CicdRPCServer) CreateTrigger(args map[string]any, resp *error) error{
-	err := s.Impl.CreateTrigger(args)
+func (s *CicdRPCServer) CreateTrigger(pigenStepsFile PigenStepsFile, resp *error) error{
+	err := s.Impl.CreateTrigger(pigenStepsFile)
 	if err != nil {
 		*resp = NewError(err.Error())
 	} else {
@@ -92,8 +92,8 @@ func (s *CicdRPCServer) CreateTrigger(args map[string]any, resp *error) error{
 	return nil
 }
 
-func (s *CicdRPCServer) GeneratScript(args map[string]any, resp *error) error{
-	err := s.Impl.GeneratScript(args)
+func (s *CicdRPCServer) GeneratScript(pigenStepsFile PigenStepsFile, resp *error) error{
+	err := s.Impl.GeneratScript(pigenStepsFile)
 	if err != nil {
 		*resp = NewError(err.Error())
 	} else {
