@@ -20,6 +20,10 @@ type Step struct {
 	Placeholders map[string]any `yaml:"placeholders" json:"placeholders"`
 }
 
+type JSONArgs struct {
+	Data string
+}
+
 type CicdInterface interface {
 
 	// Connect the repo passed in pigen.yaml to the cicd tool
@@ -47,9 +51,13 @@ func (c *CicdRPC) ConnectRepo(pigenStepsFile PigenStepsFile) error{
 	if err != nil {
 		return err
 	}
-	err = c.client.Call("Plugin.ConnectRepo", pigenStepsFileJSON, &resp)
+	args := JSONArgs{
+		Data: string(pigenStepsFileJSON),
+	}
+
+	err = c.client.Call("Plugin.ConnectRepo", args, &resp)
 	if err != nil {
-		return err
+			return err
 	}
 	return resp
 }
@@ -78,14 +86,17 @@ type CicdRPCServer struct{
 }
 
 
-func (s *CicdRPCServer) ConnectRepo(pigenStepsFileJSON string, resp *error) error{
+func (s *CicdRPCServer) ConnectRepo(args JSONArgs, resp *error) error {
 	var pigenStepsFile PigenStepsFile
-	if err := json.Unmarshal([]byte(pigenStepsFileJSON), &pigenStepsFile); err != nil {
-		*resp = NewError(err.Error())
+	
+	if err := json.Unmarshal([]byte(args.Data), &pigenStepsFile); err != nil {
+			*resp = NewError(err.Error())
+			return nil
 	}
+	
 	err := s.Impl.ConnectRepo(pigenStepsFile)
 	if err != nil {
-		*resp = NewError(err.Error())
+			*resp = NewError(err.Error())
 	} else {
 			*resp = nil
 	}
