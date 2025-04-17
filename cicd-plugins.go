@@ -24,10 +24,15 @@ type JSONArgs struct {
 	Data string
 }
 
+type ActionRequired struct {
+	ActionUrl string
+	Error error
+}
+
 type CicdInterface interface {
 
 	// Connect the repo passed in pigen.yaml to the cicd tool
-	ConnectRepo(pigenStepsFile PigenStepsFile) error
+	ConnectRepo(pigenStepsFile PigenStepsFile) ActionRequired
 
 	// Create trigger on a repo branch
 	CreateTrigger(pigenStepsFile PigenStepsFile) error
@@ -44,12 +49,15 @@ type CicdRPC struct{
 	client *rpc.Client
 }
 
-func (c *CicdRPC) ConnectRepo(pigenStepsFile PigenStepsFile) error{
-	var resp error
+func (c *CicdRPC) ConnectRepo(pigenStepsFile PigenStepsFile) ActionRequired{
+	var resp ActionRequired
 	// Convert the PigenStepsFile struct to JSON
 	pigenStepsFileJSON, err := json.Marshal(pigenStepsFile)
 	if err != nil {
-		return err
+		return ActionRequired{
+			ActionUrl: "",
+			Error: err,
+		}
 	}
 	args := JSONArgs{
 		Data: string(pigenStepsFileJSON),
@@ -57,7 +65,10 @@ func (c *CicdRPC) ConnectRepo(pigenStepsFile PigenStepsFile) error{
 
 	err = c.client.Call("Plugin.ConnectRepo", args, &resp)
 	if err != nil {
-			return err
+		return ActionRequired{
+			ActionUrl: "",
+			Error: err,
+		}
 	}
 	return resp
 }
@@ -86,19 +97,25 @@ type CicdRPCServer struct{
 }
 
 
-func (s *CicdRPCServer) ConnectRepo(args JSONArgs, resp *error) error {
+func (s *CicdRPCServer) ConnectRepo(args JSONArgs, resp *ActionRequired) error {
 	var pigenStepsFile PigenStepsFile
 	
 	if err := json.Unmarshal([]byte(args.Data), &pigenStepsFile); err != nil {
-			*resp = NewError(err.Error())
+			*resp = ActionRequired{
+					ActionUrl: "",
+					Error: NewError(err.Error()),
+				}
 			return nil
 	}
 	
-	err := s.Impl.ConnectRepo(pigenStepsFile)
-	if err != nil {
-			*resp = NewError(err.Error())
+	actionRequired := s.Impl.ConnectRepo(pigenStepsFile)
+	if actionRequired.Error != nil {
+		*resp = ActionRequired{
+			ActionUrl: "",
+			Error: NewError(actionRequired.Error.Error()),
+		}
 	} else {
-			*resp = nil
+			*resp = actionRequired
 	}
 	return nil
 }
