@@ -75,7 +75,14 @@ func (c *CicdRPC) ConnectRepo(pigenStepsFile PigenStepsFile) ActionRequired{
 
 func (c *CicdRPC) CreateTrigger(pigenStepsFile PigenStepsFile) error{
 	var resp error
-	err := c.client.Call("Plugin.CreateTrigger", pigenStepsFile, &resp)
+	pigenStepsFileJSON, err := json.Marshal(pigenStepsFile)
+	if err != nil {
+		return err
+	}
+	jsonArgs := JSONArgs{
+		Data: string(pigenStepsFileJSON),
+	}
+	err = c.client.Call("Plugin.CreateTrigger", jsonArgs, &resp)
 	if err != nil {
 		return err
 	}
@@ -84,7 +91,14 @@ func (c *CicdRPC) CreateTrigger(pigenStepsFile PigenStepsFile) error{
 
 func (c *CicdRPC) GeneratScript(pigenStepsFile PigenStepsFile) error{
 	var resp error
-	err := c.client.Call("Plugin.GeneratScript", pigenStepsFile, &resp)
+	pigenStepsFileJSON, err := json.Marshal(pigenStepsFile)
+	if err != nil {
+		return err
+	}
+	jsonArgs := JSONArgs{
+		Data: string(pigenStepsFileJSON),
+	}
+	err = c.client.Call("Plugin.GeneratScript", jsonArgs, &resp)
 	if err != nil {
 		return err
 	}
@@ -120,7 +134,12 @@ func (s *CicdRPCServer) ConnectRepo(args JSONArgs, resp *ActionRequired) error {
 	return nil
 }
 
-func (s *CicdRPCServer) CreateTrigger(pigenStepsFile PigenStepsFile, resp *error) error{
+func (s *CicdRPCServer) CreateTrigger(args JSONArgs, resp *error) error{
+	var pigenStepsFile PigenStepsFile
+	if err := json.Unmarshal([]byte(args.Data), &pigenStepsFile); err != nil {
+			*resp = NewError(err.Error())
+			return nil
+	}
 	err := s.Impl.CreateTrigger(pigenStepsFile)
 	if err != nil {
 		*resp = NewError(err.Error())
@@ -130,7 +149,12 @@ func (s *CicdRPCServer) CreateTrigger(pigenStepsFile PigenStepsFile, resp *error
 	return nil
 }
 
-func (s *CicdRPCServer) GeneratScript(pigenStepsFile PigenStepsFile, resp *error) error{
+func (s *CicdRPCServer) GeneratScript(args JSONArgs, resp *error) error{
+	var pigenStepsFile PigenStepsFile
+	if err := json.Unmarshal([]byte(args.Data), &pigenStepsFile); err != nil {
+			*resp = NewError(err.Error())
+			return nil
+	}
 	err := s.Impl.GeneratScript(pigenStepsFile)
 	if err != nil {
 		*resp = NewError(err.Error())
