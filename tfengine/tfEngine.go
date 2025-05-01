@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/exec" // Still needed for LookPath
 	"path/filepath"
-	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-exec/tfexec"
 	"github.com/pigen-dev/shared/utils"
 )
@@ -25,14 +24,13 @@ type TerraformFiles struct {
 	OutputTf []byte
 }
 // setupTerraform creates a new Terraform executor instance.
-func NewTF(tfVars map[string]any, TFFiles TerraformFiles) (*Terraform, error) {
+func NewTF(tfVars map[string]any, TFFiles TerraformFiles, pluginLabel string) (*Terraform, error) {
 	// Specify the path to the terraform executable
 	execPath, err := exec.LookPath("terraform") // Attempts to find terraform in PATH
 	if err != nil {
 		return nil, fmt.Errorf("terraform executable not found in PATH: %w", err)
 	}
-	//This can panic if failed to create uuid
-	uniqueDir := fmt.Sprintf("./terraform/%s", uuid.New().String())
+	uniqueDir := fmt.Sprintf("./terraform/%s", pluginLabel)
 	err = os.MkdirAll(uniqueDir, os.ModePerm)
 	if err != nil {
 			return nil, fmt.Errorf("Failed to create directory: %v", err)
@@ -176,7 +174,8 @@ func (t *Terraform)TerraformDestroy(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("terraform destroy failed: %w", err)
 	}
-
+	defer t.CleanUp()
+	log.Println("Temp directory removed successfully.")
 	log.Println("--- Terraform destroy finished successfully ---")
 	log.Println("") // Add a newline
 	return nil
