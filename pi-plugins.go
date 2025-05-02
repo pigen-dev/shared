@@ -47,16 +47,16 @@ type PluginRPC struct{
 func (c *PluginRPC) SetupPlugin(plugin Plugin) error{
 	var resp error
 	argsJSON, err := json.Marshal(plugin)
-	args := JSONArgs{
-		Data: string(argsJSON),
-	}
 	if err != nil {
 		log.Printf("Error encoding plugin: %v", err)
 		return err
 	}
-	log.Printf("Encoded plugin: %v", args)
+	args := JSONArgs{
+		Data: string(argsJSON),
+	}
 	err = c.client.Call("Plugin.SetupPlugin", args, &resp)
 	if err != nil {
+		log.Printf("Error calling SetupPlugin: %v", err)
 		return err
 	}
 	return resp
@@ -109,7 +109,7 @@ type PluginRPCServer struct{
 
 
 func (s *PluginRPCServer) SetupPlugin(args JSONArgs, resp *error) error{
-	plugin := Plugin{}
+	var plugin Plugin
 	err := json.Unmarshal([]byte(args.Data), &plugin)
 	if err != nil {
 		*resp = NewError(fmt.Errorf("failed to decode args: %w", err).Error())
