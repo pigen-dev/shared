@@ -107,7 +107,7 @@ type PluginRPCServer struct{
 
 func (s *PluginRPCServer) SetupPlugin(args JSONArgs, resp *error) error{
 	plugin := Plugin{}
-	err := GobDecode(args, &plugin)
+	err := json.Unmarshal([]byte(args.Data), &plugin)
 	if err != nil {
 		*resp = NewError(fmt.Errorf("failed to decode args: %w", err).Error())
 		return nil

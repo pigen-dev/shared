@@ -48,12 +48,15 @@ type CicdRPC struct{
 func (c *CicdRPC) ConnectRepo(pigenStepsFile PigenStepsFile) ActionRequired{
 	var resp ActionRequired
 	// Convert the PigenStepsFile struct to JSON
-	args, err := json.Marshal(pigenStepsFile)
+	pigenStepsFileJSON, err := json.Marshal(pigenStepsFile)
 	if err != nil {
 		return ActionRequired{
 			ActionUrl: "",
 			Error: err,
 		}
+	}
+	args := JSONArgs{
+		Data: string(pigenStepsFileJSON),
 	}
 
 	err = c.client.Call("Plugin.ConnectRepo", args, &resp)
@@ -68,11 +71,14 @@ func (c *CicdRPC) ConnectRepo(pigenStepsFile PigenStepsFile) ActionRequired{
 
 func (c *CicdRPC) CreateTrigger(pigenStepsFile PigenStepsFile) error{
 	var resp error
-	args, err := json.Marshal(pigenStepsFile)
+	pigenStepsFileJSON, err := json.Marshal(pigenStepsFile)
 	if err != nil {
 		return err
 	}
-	err = c.client.Call("Plugin.CreateTrigger", args, &resp)
+	jsonArgs := JSONArgs{
+		Data: string(pigenStepsFileJSON),
+	}
+	err = c.client.Call("Plugin.CreateTrigger", jsonArgs, &resp)
 	if err != nil {
 		return err
 	}
@@ -81,11 +87,14 @@ func (c *CicdRPC) CreateTrigger(pigenStepsFile PigenStepsFile) error{
 
 func (c *CicdRPC) GeneratScript(pigenStepsFile PigenStepsFile) error{
 	var resp error
-	args, err := json.Marshal(pigenStepsFile)
+	pigenStepsFileJSON, err := json.Marshal(pigenStepsFile)
 	if err != nil {
 		return err
 	}
-	err = c.client.Call("Plugin.GeneratScript", args, &resp)
+	jsonArgs := JSONArgs{
+		Data: string(pigenStepsFileJSON),
+	}
+	err = c.client.Call("Plugin.GeneratScript", jsonArgs, &resp)
 	if err != nil {
 		return err
 	}
@@ -101,7 +110,7 @@ type CicdRPCServer struct{
 func (s *CicdRPCServer) ConnectRepo(args JSONArgs, resp *ActionRequired) error {
 	var pigenStepsFile PigenStepsFile
 	
-	if err := GobDecode(args, &pigenStepsFile); err != nil {
+	if err := json.Unmarshal([]byte(args.Data), &pigenStepsFile); err != nil {
 			*resp = ActionRequired{
 					ActionUrl: "",
 					Error: NewError(err.Error()),
@@ -123,7 +132,7 @@ func (s *CicdRPCServer) ConnectRepo(args JSONArgs, resp *ActionRequired) error {
 
 func (s *CicdRPCServer) CreateTrigger(args JSONArgs, resp *error) error{
 	var pigenStepsFile PigenStepsFile
-	if err := GobDecode(args, &pigenStepsFile); err != nil {
+	if err := json.Unmarshal([]byte(args.Data), &pigenStepsFile); err != nil {
 			*resp = NewError(err.Error())
 			return nil
 	}
@@ -138,7 +147,7 @@ func (s *CicdRPCServer) CreateTrigger(args JSONArgs, resp *error) error{
 
 func (s *CicdRPCServer) GeneratScript(args JSONArgs, resp *error) error{
 	var pigenStepsFile PigenStepsFile
-	if err := GobDecode(args, &pigenStepsFile); err != nil {
+	if err := json.Unmarshal([]byte(args.Data), &pigenStepsFile); err != nil {
 			*resp = NewError(err.Error())
 			return nil
 	}
