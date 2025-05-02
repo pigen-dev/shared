@@ -22,9 +22,9 @@ type Plugin struct {
 	Output map[string]any `yaml:"output" json:"output"`
 }
 type PluginInterface interface {
-	SetupPlugin(in map[string]any) error
-	GetOutput(in map[string]any) GetOutputResponse
-	Destroy(in map[string]any) error
+	SetupPlugin(plugin Plugin) error
+	GetOutput(plugin Plugin) GetOutputResponse
+	Destroy(plugin Plugin) error
 }
 
 type GetOutputResponse struct {
@@ -43,9 +43,13 @@ type PluginRPC struct{
 	client *rpc.Client
 }
 
-func (c *PluginRPC) SetupPlugin(in map[string]any) error{
+func (c *PluginRPC) SetupPlugin(plugin Plugin) error{
 	var resp error
-	err := c.client.Call("Plugin.SetupPlugin", in, &resp)
+	args, err := GobEncode(plugin)
+	if err != nil {
+		return err
+	}
+	err = c.client.Call("Plugin.SetupPlugin", args, &resp)
 	if err != nil {
 		return err
 	}
@@ -54,7 +58,14 @@ func (c *PluginRPC) SetupPlugin(in map[string]any) error{
 
 func (c *PluginRPC) GetOutput(in map[string]any) GetOutputResponse{
 	var rpcResp GetOutputRPCResponse
-	err := c.client.Call("Plugin.GetOutput", in, &rpcResp)
+	args, err := GobEncode(in)
+	if err != nil {
+		return GetOutputResponse{
+			Output: nil,
+			Error: NewError(err.Error()),
+		}
+	}
+	err = c.client.Call("Plugin.GetOutput", args, &rpcResp)
 	var outputMap map[string]any
   var outputErr error
 	if err != nil {
@@ -73,7 +84,11 @@ func (c *PluginRPC) GetOutput(in map[string]any) GetOutputResponse{
 
 func (c *PluginRPC) Destroy(in map[string]any) error{
 	var resp error
-	err := c.client.Call("Plugin.Destroy", in, &resp)
+	args, err := GobEncode(in)
+	if err != nil {
+		return err
+	}
+	err = c.client.Call("Plugin.Destroy", args, &resp)
 	if err != nil {
 		return err
 	}
@@ -87,8 +102,14 @@ type PluginRPCServer struct{
 }
 
 
-func (s *PluginRPCServer) SetupPlugin(args map[string]any, resp *error) error{
-	err := s.Impl.SetupPlugin(args)
+func (s *PluginRPCServer) SetupPlugin(args JSONArgs, resp *error) error{
+	plugin := Plugin{}
+	err := GobDecode(args, &plugin)
+	if err != nil {
+		*resp = NewError(fmt.Errorf("failed to decode args: %w", err).Error())
+		return nil
+	}
+	err = s.Impl.SetupPlugin(plugin)
 	if err != nil {
 		*resp = NewError(err.Error())
 	} else {
@@ -97,8 +118,15 @@ func (s *PluginRPCServer) SetupPlugin(args map[string]any, resp *error) error{
 	return nil
 }
 
-func (s *PluginRPCServer) GetOutput(args map[string]any, resp *GetOutputRPCResponse) error{
-	result := s.Impl.GetOutput(args)
+func (s *PluginRPCServer) GetOutput(args JSONArgs, resp *GetOutputRPCResponse) error{
+	plugin := Plugin{}
+	err := GobDecode(args, &plugin)
+	if err != nil {
+		resp.OutputJSON = "{}"
+		resp.Error = NewError(fmt.Errorf("failed to decode args: %w", err).Error())
+		return nil
+	}
+	result := s.Impl.GetOutput(plugin)
 	if result.Output != nil {
 		jsonData, err := json.Marshal(result.Output)
 		if err != nil {
@@ -121,8 +149,15 @@ func (s *PluginRPCServer) GetOutput(args map[string]any, resp *GetOutputRPCRespo
 	return nil
 }
 
-func (s *PluginRPCServer) Destroy(args map[string]any, resp *error) error{
-	err := s.Impl.Destroy(args)
+func (s *PluginRPCServer) Destroy(args JSONArgs, resp *error) error{
+	plugin := Plugin{}
+	err := GobDecode(args, &plugin)
+	if err != nil {
+		*resp = NewError(fmt.Errorf("failed to decode args: %w", err).Error())
+		return nil
+	}
+	// Call the Destroy method on the plugin implementation
+	err = s.Impl.Destroy(plugin)
 	if err != nil {
 		*resp = NewError(err.Error())
 	} else {
