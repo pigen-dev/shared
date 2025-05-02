@@ -46,7 +46,10 @@ type PluginRPC struct{
 
 func (c *PluginRPC) SetupPlugin(plugin Plugin) error{
 	var resp error
-	args, err := GobEncode(plugin)
+	argsJSON, err := json.Marshal(plugin)
+	args := JSONArgs{
+		Data: string(argsJSON),
+	}
 	if err != nil {
 		log.Printf("Error encoding plugin: %v", err)
 		return err
