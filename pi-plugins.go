@@ -62,9 +62,9 @@ func (c *PluginRPC) SetupPlugin(plugin Plugin) error{
 	return resp
 }
 
-func (c *PluginRPC) GetOutput(in map[string]any) GetOutputResponse{
+func (c *PluginRPC) GetOutput(plugin Plugin) GetOutputResponse{
 	var rpcResp GetOutputRPCResponse
-	args, err := GobEncode(in)
+	args, err := GobEncode(plugin)
 	if err != nil {
 		return GetOutputResponse{
 			Output: nil,
@@ -88,9 +88,9 @@ func (c *PluginRPC) GetOutput(in map[string]any) GetOutputResponse{
 	return GetOutputResponse{Output: outputMap, Error: outputErr}
 }
 
-func (c *PluginRPC) Destroy(in map[string]any) error{
+func (c *PluginRPC) Destroy(plugin Plugin) error{
 	var resp error
-	args, err := GobEncode(in)
+	args, err := GobEncode(plugin)
 	if err != nil {
 		return err
 	}
