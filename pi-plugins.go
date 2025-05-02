@@ -3,6 +3,7 @@ package pluginshared
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/rpc"
 
 	"github.com/hashicorp/go-plugin"
@@ -47,8 +48,10 @@ func (c *PluginRPC) SetupPlugin(plugin Plugin) error{
 	var resp error
 	args, err := GobEncode(plugin)
 	if err != nil {
+		log.Printf("Error encoding plugin: %v", err)
 		return err
 	}
+	log.Printf("Encoded plugin: %v", args)
 	err = c.client.Call("Plugin.SetupPlugin", args, &resp)
 	if err != nil {
 		return err
