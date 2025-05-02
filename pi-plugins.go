@@ -46,13 +46,10 @@ type PluginRPC struct{
 
 func (c *PluginRPC) SetupPlugin(plugin Plugin) error{
 	var resp error
-	argsJSON, err := json.Marshal(plugin)
+	args, err := GobEncode(plugin)
 	if err != nil {
 		log.Printf("Error encoding plugin: %v", err)
 		return err
-	}
-	args := JSONArgs{
-		Data: string(argsJSON),
 	}
 	err = c.client.Call("Plugin.SetupPlugin", args, &resp)
 	if err != nil {
@@ -110,7 +107,7 @@ type PluginRPCServer struct{
 
 func (s *PluginRPCServer) SetupPlugin(args JSONArgs, resp *error) error{
 	var plugin Plugin
-	err := json.Unmarshal([]byte(args.Data), &plugin)
+	err := GobDecode(args, &plugin)
 	if err != nil {
 		*resp = NewError(fmt.Errorf("failed to decode args: %w", err).Error())
 		return nil
@@ -125,7 +122,7 @@ func (s *PluginRPCServer) SetupPlugin(args JSONArgs, resp *error) error{
 }
 
 func (s *PluginRPCServer) GetOutput(args JSONArgs, resp *GetOutputRPCResponse) error{
-	plugin := Plugin{}
+	var plugin Plugin
 	err := GobDecode(args, &plugin)
 	if err != nil {
 		resp.OutputJSON = "{}"
@@ -156,7 +153,7 @@ func (s *PluginRPCServer) GetOutput(args JSONArgs, resp *GetOutputRPCResponse) e
 }
 
 func (s *PluginRPCServer) Destroy(args JSONArgs, resp *error) error{
-	plugin := Plugin{}
+	var plugin Plugin
 	err := GobDecode(args, &plugin)
 	if err != nil {
 		*resp = NewError(fmt.Errorf("failed to decode args: %w", err).Error())
