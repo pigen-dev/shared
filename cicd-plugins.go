@@ -25,6 +25,10 @@ type ActionRequired struct {
 	Error error
 }
 
+type CICDFile struct {
+	FileScript []byte
+	Error error
+}
 type CicdInterface interface {
 
 	// Connect the repo passed in pigen.yaml to the cicd tool
@@ -35,7 +39,7 @@ type CicdInterface interface {
 	
 	// Generate pipeline script
 
-	GeneratScript(pigenStepsFile PigenStepsFile) error
+	GeneratScript(pigenStepsFile PigenStepsFile) CICDFile
 
 	//TODO: Return service account to give it access to deployed plugins
 }
@@ -85,18 +89,24 @@ func (c *CicdRPC) CreateTrigger(pigenStepsFile PigenStepsFile) error{
 	return resp
 }
 
-func (c *CicdRPC) GeneratScript(pigenStepsFile PigenStepsFile) error{
-	var resp error
+func (c *CicdRPC) GeneratScript(pigenStepsFile PigenStepsFile) CICDFile{
+	var resp CICDFile
 	pigenStepsFileJSON, err := json.Marshal(pigenStepsFile)
 	if err != nil {
-		return err
+		return CICDFile{
+			FileScript: nil,
+			Error: err,
+		}
 	}
 	jsonArgs := JSONArgs{
 		Data: string(pigenStepsFileJSON),
 	}
 	err = c.client.Call("Plugin.GeneratScript", jsonArgs, &resp)
 	if err != nil {
-		return err
+		return CICDFile{
+			FileScript: nil,
+			Error: err,
+		}
 	}
 	return resp
 }
@@ -145,17 +155,23 @@ func (s *CicdRPCServer) CreateTrigger(args JSONArgs, resp *error) error{
 	return nil
 }
 
-func (s *CicdRPCServer) GeneratScript(args JSONArgs, resp *error) error{
+func (s *CicdRPCServer) GeneratScript(args JSONArgs, resp *CICDFile) error{
 	var pigenStepsFile PigenStepsFile
 	if err := json.Unmarshal([]byte(args.Data), &pigenStepsFile); err != nil {
-			*resp = NewError(err.Error())
+			*resp = CICDFile{
+				FileScript: nil,
+				Error: NewError(err.Error()),
+			}
 			return nil
 	}
-	err := s.Impl.GeneratScript(pigenStepsFile)
-	if err != nil {
-		*resp = NewError(err.Error())
+	cicdFile := s.Impl.GeneratScript(pigenStepsFile)
+	if cicdFile.Error != nil {
+		*resp = CICDFile{
+			FileScript: nil,
+			Error: NewError(cicdFile.Error.Error()),
+		}
 	} else {
-			*resp = nil
+			*resp = cicdFile
 	}
 	return nil
 }
