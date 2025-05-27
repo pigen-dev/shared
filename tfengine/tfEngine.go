@@ -63,8 +63,9 @@ func NewTF(tfVars map[string]any, TFFiles TerraformFiles, pluginLabel string) (*
 
 
 func (t *Terraform)TerraformInit(ctx context.Context, projectID, pluginLabel string) error {
-	backendBucket := fmt.Sprintf("bucket=%s-terraform-state-bucket", projectID)
-	err := bucket.SetupBackend(backendBucket, projectID)
+	bucketName := fmt.Sprintf("%s-terraform-state-bucket", projectID)
+	backendBucket := fmt.Sprintf("bucket=%s", bucketName)
+	err := bucket.SetupBackend(bucketName, projectID)
 	if err != nil {
 		return fmt.Errorf("err setting up the backend bucket: %w", err)
 	}
