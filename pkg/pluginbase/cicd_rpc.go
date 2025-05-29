@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/go-plugin"
 )
 
-// ###################Client####################
+// Client RPC for CICD 
 type CicdRPC struct{
 	client *rpc.Client
 }
@@ -74,7 +74,7 @@ func (c *CicdRPC) GeneratScript(pigenStepsFile PigenStepsFile) CICDFile{
 	return resp
 }
 
-// ###################Server####################
+// Server RPC for CICD
 type CicdRPCServer struct{
 	Impl CicdInterface
 }

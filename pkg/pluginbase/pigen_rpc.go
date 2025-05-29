@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/go-plugin"
 )
 
-// ###################Client####################
+// Client RPC for Plugins
 type PluginRPC struct{
 	client *rpc.Client
 }
@@ -75,7 +75,7 @@ func (c *PluginRPC) Destroy(plugin Plugin) error{
 }
 
 
-// ###################Server####################
+// Server RPC for Plugins
 type PluginRPCServer struct{
 	Impl PluginInterface
 }
