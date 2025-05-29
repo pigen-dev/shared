@@ -1,4 +1,4 @@
-package pluginshared
+package pluginbase
 
 import (
 	"encoding/gob"

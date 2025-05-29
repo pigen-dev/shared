@@ -1,4 +1,4 @@
-package pluginshared
+package pluginbase
 
 type PipelineNotification struct {
 	CicdType string `json:"cicd_type"`

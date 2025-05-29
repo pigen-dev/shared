@@ -1,4 +1,4 @@
-package pluginshared
+package pluginbase
 
 import (
 	"encoding/json"
@@ -6,43 +6,6 @@ import (
 
 	"github.com/hashicorp/go-plugin"
 )
-
-type PigenStepsFile struct {
-	Type string `yaml:"type" json:"type"`
-	Version string `yaml:"version" json:"version"`
-	RepoUrl string `yaml:"repo_url" json:"repo_url"`
-	Config map[string]any `yaml:"config" json:"config"`
-	Steps []Step `yaml:"steps" json:"steps"`
-}
-
-type Step struct {
-	Step string `yaml:"step" json:"step"`
-	Placeholders map[string]any `yaml:"placeholders" json:"placeholders"`
-}
-
-type ActionRequired struct {
-	ActionUrl string
-	Error error
-}
-
-type CICDFile struct {
-	FileScript []byte
-	Error error
-}
-type CicdInterface interface {
-
-	// Connect the repo passed in pigen.yaml to the cicd tool
-	ConnectRepo(pigenStepsFile PigenStepsFile) ActionRequired
-
-	// Create trigger on a repo branch
-	CreateTrigger(pigenStepsFile PigenStepsFile) error
-	
-	// Generate pipeline script
-
-	GeneratScript(pigenStepsFile PigenStepsFile) CICDFile
-
-	//TODO: Return service account to give it access to deployed plugins
-}
 
 // ###################Client####################
 type CicdRPC struct{
@@ -123,7 +86,7 @@ func (s *CicdRPCServer) ConnectRepo(args JSONArgs, resp *ActionRequired) error {
 	if err := json.Unmarshal([]byte(args.Data), &pigenStepsFile); err != nil {
 			*resp = ActionRequired{
 					ActionUrl: "",
-					Error: NewError(err.Error()),
+					Error: NewError(err.Error()), // NewError is in pluginbase.config
 				}
 			return nil
 	}
@@ -132,7 +95,7 @@ func (s *CicdRPCServer) ConnectRepo(args JSONArgs, resp *ActionRequired) error {
 	if actionRequired.Error != nil {
 		*resp = ActionRequired{
 			ActionUrl: "",
-			Error: NewError(actionRequired.Error.Error()),
+			Error: NewError(actionRequired.Error.Error()), // NewError is in pluginbase.config
 		}
 	} else {
 			*resp = actionRequired
@@ -143,12 +106,12 @@ func (s *CicdRPCServer) ConnectRepo(args JSONArgs, resp *ActionRequired) error {
 func (s *CicdRPCServer) CreateTrigger(args JSONArgs, resp *error) error{
 	var pigenStepsFile PigenStepsFile
 	if err := json.Unmarshal([]byte(args.Data), &pigenStepsFile); err != nil {
-			*resp = NewError(err.Error())
+			*resp = NewError(err.Error()) // NewError is in pluginbase.config
 			return nil
 	}
 	err := s.Impl.CreateTrigger(pigenStepsFile)
 	if err != nil {
-		*resp = NewError(err.Error())
+		*resp = NewError(err.Error()) // NewError is in pluginbase.config
 	} else {
 			*resp = nil
 	}
@@ -160,7 +123,7 @@ func (s *CicdRPCServer) GeneratScript(args JSONArgs, resp *CICDFile) error{
 	if err := json.Unmarshal([]byte(args.Data), &pigenStepsFile); err != nil {
 			*resp = CICDFile{
 				FileScript: nil,
-				Error: NewError(err.Error()),
+				Error: NewError(err.Error()), // NewError is in pluginbase.config
 			}
 			return nil
 	}
@@ -168,7 +131,7 @@ func (s *CicdRPCServer) GeneratScript(args JSONArgs, resp *CICDFile) error{
 	if cicdFile.Error != nil {
 		*resp = CICDFile{
 			FileScript: nil,
-			Error: NewError(cicdFile.Error.Error()),
+			Error: NewError(cicdFile.Error.Error()), // NewError is in pluginbase.config
 		}
 	} else {
 			*resp = cicdFile

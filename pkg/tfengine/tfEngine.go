@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 
 	"github.com/hashicorp/terraform-exec/tfexec"
-	"github.com/pigen-dev/shared/tfengine/bucket"
-	"github.com/pigen-dev/shared/utils"
+	"github.com/pigen-dev/shared/pkg/tfengine/bucket"
+	"github.com/pigen-dev/shared/pkg/utils"
 )
 
 type Terraform struct {

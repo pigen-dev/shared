@@ -1,4 +1,4 @@
-package pluginshared
+package pluginbase
 
 import (
 	"encoding/json"
@@ -9,36 +9,6 @@ import (
 	"github.com/hashicorp/go-plugin"
 )
 
-type PluginStruct struct {
-	ID string `yaml:"id" json:"id"`
-	RepoUrl string `yaml:"repo_url" json:"repo_url"`
-	Version string `yaml:"version" json:"version"`
-	Plugin Plugin `yaml:"plugin" json:"plugin"`
-}
-
-type Plugin struct {
-	Label string `yaml:"label" json:"label"`
-  // You can redefine your Config or Output 
-	Config map[string]any `yaml:"config" json:"config"`
-	Output map[string]any `yaml:"output" json:"output"`
-}
-type PluginInterface interface {
-	SetupPlugin(plugin Plugin) error
-	GetOutput(plugin Plugin) GetOutputResponse
-	Destroy(plugin Plugin) error
-}
-
-type GetOutputResponse struct {
-	Output map[string]any
-	Error  error
-}
-
-// Add a transport-specific structure for RPC communication
-type GetOutputRPCResponse struct {
-	OutputJSON string // JSON-encoded output map
-	Error  error
-}
-
 // ###################Client####################
 type PluginRPC struct{
 	client *rpc.Client
@@ -46,7 +16,7 @@ type PluginRPC struct{
 
 func (c *PluginRPC) SetupPlugin(plugin Plugin) error{
 	var resp error
-	args, err := GobEncode(plugin)
+	args, err := GobEncode(plugin) // GobEncode is in pluginbase.config
 	if err != nil {
 		log.Printf("Error encoding plugin: %v", err)
 		return err
@@ -56,29 +26,32 @@ func (c *PluginRPC) SetupPlugin(plugin Plugin) error{
 		log.Printf("Error calling SetupPlugin: %v", err)
 		return err
 	}
-	return resp
+	if resp != nil { // Check if the error returned from RPC is not nil
+		return resp
+	}
+	return nil
 }
 
 func (c *PluginRPC) GetOutput(plugin Plugin) GetOutputResponse{
 	var rpcResp GetOutputRPCResponse
-	args, err := GobEncode(plugin)
+	args, err := GobEncode(plugin) // GobEncode is in pluginbase.config
 	if err != nil {
 		return GetOutputResponse{
 			Output: nil,
-			Error: NewError(err.Error()),
+			Error: NewError(err.Error()), // NewError is in pluginbase.config
 		}
 	}
 	err = c.client.Call("Plugin.GetOutput", args, &rpcResp)
 	var outputMap map[string]any
   var outputErr error
 	if err != nil {
-		outputErr = NewError(err.Error())
+		outputErr = NewError(err.Error()) // NewError is in pluginbase.config
 	} else {
 		if rpcResp.Error != nil {
-			outputErr = NewError(rpcResp.Error.Error())
+			outputErr = NewError(rpcResp.Error.Error()) // NewError is in pluginbase.config
 		} else {
 			if err := json.Unmarshal([]byte(rpcResp.OutputJSON), &outputMap); err != nil {
-				outputErr = NewError(err.Error())
+				outputErr = NewError(err.Error()) // NewError is in pluginbase.config
 			}
 		}
 	}
@@ -87,7 +60,7 @@ func (c *PluginRPC) GetOutput(plugin Plugin) GetOutputResponse{
 
 func (c *PluginRPC) Destroy(plugin Plugin) error{
 	var resp error
-	args, err := GobEncode(plugin)
+	args, err := GobEncode(plugin) // GobEncode is in pluginbase.config
 	if err != nil {
 		return err
 	}
@@ -95,7 +68,10 @@ func (c *PluginRPC) Destroy(plugin Plugin) error{
 	if err != nil {
 		return err
 	}
-	return resp
+	if resp != nil { // Check if the error returned from RPC is not nil
+		return resp
+	}
+	return nil
 }
 
 
@@ -107,14 +83,14 @@ type PluginRPCServer struct{
 
 func (s *PluginRPCServer) SetupPlugin(args JSONArgs, resp *error) error{
 	var plugin Plugin
-	err := GobDecode(args, &plugin)
+	err := GobDecode(args, &plugin) // GobDecode is in pluginbase.config
 	if err != nil {
-		*resp = NewError(fmt.Errorf("failed to decode args: %w", err).Error())
+		*resp = NewError(fmt.Errorf("failed to decode args: %w", err).Error()) // NewError is in pluginbase.config
 		return nil
 	}
 	err = s.Impl.SetupPlugin(plugin)
 	if err != nil {
-		*resp = NewError(err.Error())
+		*resp = NewError(err.Error()) // NewError is in pluginbase.config
 	} else {
 			*resp = nil
 	}
@@ -123,10 +99,10 @@ func (s *PluginRPCServer) SetupPlugin(args JSONArgs, resp *error) error{
 
 func (s *PluginRPCServer) GetOutput(args JSONArgs, resp *GetOutputRPCResponse) error{
 	var plugin Plugin
-	err := GobDecode(args, &plugin)
+	err := GobDecode(args, &plugin) // GobDecode is in pluginbase.config
 	if err != nil {
 		resp.OutputJSON = "{}"
-		resp.Error = NewError(fmt.Errorf("failed to decode args: %w", err).Error())
+		resp.Error = NewError(fmt.Errorf("failed to decode args: %w", err).Error()) // NewError is in pluginbase.config
 		return nil
 	}
 	result := s.Impl.GetOutput(plugin)
@@ -134,7 +110,7 @@ func (s *PluginRPCServer) GetOutput(args JSONArgs, resp *GetOutputRPCResponse) e
 		jsonData, err := json.Marshal(result.Output)
 		if err != nil {
 				resp.OutputJSON = "{}"
-				resp.Error = NewError(fmt.Errorf("failed to json marshal output: %w", err).Error())
+				resp.Error = NewError(fmt.Errorf("failed to json marshal output: %w", err).Error()) // NewError is in pluginbase.config
 				return nil
 		}
 		resp.OutputJSON = string(jsonData)
@@ -144,7 +120,7 @@ func (s *PluginRPCServer) GetOutput(args JSONArgs, resp *GetOutputRPCResponse) e
 
 	// Serialize any error to JSON
 	if result.Error != nil {
-			resp.Error = NewError(result.Error.Error())
+			resp.Error = NewError(result.Error.Error()) // NewError is in pluginbase.config
 	} else {
 			resp.Error = nil
 	}
@@ -154,15 +130,15 @@ func (s *PluginRPCServer) GetOutput(args JSONArgs, resp *GetOutputRPCResponse) e
 
 func (s *PluginRPCServer) Destroy(args JSONArgs, resp *error) error{
 	var plugin Plugin
-	err := GobDecode(args, &plugin)
+	err := GobDecode(args, &plugin) // GobDecode is in pluginbase.config
 	if err != nil {
-		*resp = NewError(fmt.Errorf("failed to decode args: %w", err).Error())
+		*resp = NewError(fmt.Errorf("failed to decode args: %w", err).Error()) // NewError is in pluginbase.config
 		return nil
 	}
 	// Call the Destroy method on the plugin implementation
 	err = s.Impl.Destroy(plugin)
 	if err != nil {
-		*resp = NewError(err.Error())
+		*resp = NewError(err.Error()) // NewError is in pluginbase.config
 	} else {
 			*resp = nil
 	}
@@ -180,5 +156,3 @@ func (g *PigenPlugin) Server(*plugin.MuxBroker)(any, error){
 func (PigenPlugin) Client(b *plugin.MuxBroker, c *rpc.Client)(any, error){
 	return &PluginRPC{client: c}, nil
 }
-
-
