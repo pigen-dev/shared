@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 
 	"github.com/hashicorp/terraform-exec/tfexec"
-	"github.com/pigen-dev/shared/pkg/tfengine/bucket"
 	"github.com/pigen-dev/shared/pkg/utils"
 )
 
@@ -65,7 +64,7 @@ func NewTF(tfVars map[string]any, TFFiles TerraformFiles, pluginLabel string) (*
 func (t *Terraform)TerraformInit(ctx context.Context, projectID, pluginLabel string) error {
 	bucketName := fmt.Sprintf("%s-terraform-state-bucket", projectID)
 	backendBucket := fmt.Sprintf("bucket=%s", bucketName)
-	err := bucket.SetupBackend(bucketName, projectID)
+	err := utils.SetupBackend(bucketName, projectID)
 	if err != nil {
 		return fmt.Errorf("err setting up the backend bucket: %w", err)
 	}
