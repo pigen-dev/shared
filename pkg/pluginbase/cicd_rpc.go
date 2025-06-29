@@ -2,12 +2,13 @@ package pluginbase
 
 import (
 	"encoding/json"
+	"fmt" // Added for error wrapping
 	"net/rpc"
 
 	"github.com/hashicorp/go-plugin"
 )
 
-// Client RPC for CICD 
+// ###################Client####################
 type CicdRPC struct{
 	client *rpc.Client
 }
@@ -17,10 +18,8 @@ func (c *CicdRPC) ConnectRepo(pigenStepsFile PigenStepsFile) ActionRequired{
 	// Convert the PigenStepsFile struct to JSON
 	pigenStepsFileJSON, err := json.Marshal(pigenStepsFile)
 	if err != nil {
-		return ActionRequired{
-			ActionUrl: "",
-			Error: err,
-		}
+		resp.Error = NewError(fmt.Sprintf("failed to marshal request for ConnectRepo: %v", err))
+		return resp
 	}
 	args := JSONArgs{
 		Data: string(pigenStepsFileJSON),
@@ -28,53 +27,51 @@ func (c *CicdRPC) ConnectRepo(pigenStepsFile PigenStepsFile) ActionRequired{
 
 	err = c.client.Call("Plugin.ConnectRepo", args, &resp)
 	if err != nil {
-		return ActionRequired{
-			ActionUrl: "",
-			Error: err,
-		}
+		resp.Error = NewError(fmt.Sprintf("RPC call ConnectRepo failed: %v", err))
+		return resp
 	}
 	return resp
 }
 
-func (c *CicdRPC) CreateTrigger(pigenStepsFile PigenStepsFile) error{
-	var resp error
+func (c *CicdRPC) CreateTrigger(pigenStepsFile PigenStepsFile) error {
 	pigenStepsFileJSON, err := json.Marshal(pigenStepsFile)
 	if err != nil {
-		return err
+		return NewError(fmt.Sprintf("failed to marshal request for CreateTrigger: %v", err))
 	}
 	jsonArgs := JSONArgs{
 		Data: string(pigenStepsFileJSON),
 	}
-	err = c.client.Call("Plugin.CreateTrigger", jsonArgs, &resp)
-	if err != nil {
-		return err
+	var serverResponse *CustomError // Server is expected to return *CustomError for business logic errors
+	err = c.client.Call("Plugin.CreateTrigger", jsonArgs, &serverResponse)
+	if err != nil { // RPC communication error
+		return NewError(fmt.Sprintf("RPC call CreateTrigger failed: %v", err))
 	}
-	return resp
+	if serverResponse != nil { // Business logic error from server
+		return serverResponse
+	}
+	return nil // Success
 }
 
-func (c *CicdRPC) GeneratScript(pigenStepsFile PigenStepsFile) CICDFile{
+func (c *CicdRPC) GenerateScript(pigenStepsFile PigenStepsFile) CICDFile { // Renamed
 	var resp CICDFile
 	pigenStepsFileJSON, err := json.Marshal(pigenStepsFile)
 	if err != nil {
-		return CICDFile{
-			FileScript: nil,
-			Error: err,
-		}
+		resp.Error = NewError(fmt.Sprintf("failed to marshal request for GenerateScript: %v", err))
+		return resp
 	}
 	jsonArgs := JSONArgs{
 		Data: string(pigenStepsFileJSON),
 	}
-	err = c.client.Call("Plugin.GeneratScript", jsonArgs, &resp)
+	// RPC call string updated
+	err = c.client.Call("Plugin.GenerateScript", jsonArgs, &resp)
 	if err != nil {
-		return CICDFile{
-			FileScript: nil,
-			Error: err,
-		}
+		resp.Error = NewError(fmt.Sprintf("RPC call GenerateScript failed: %v", err))
+		return resp
 	}
 	return resp
 }
 
-// Server RPC for CICD
+// ###################Server####################
 type CicdRPCServer struct{
 	Impl CicdInterface
 }
@@ -82,20 +79,20 @@ type CicdRPCServer struct{
 
 func (s *CicdRPCServer) ConnectRepo(args JSONArgs, resp *ActionRequired) error {
 	var pigenStepsFile PigenStepsFile
-	
-	if err := json.Unmarshal([]byte(args.Data), &pigenStepsFile); err != nil {
-			*resp = ActionRequired{
-					ActionUrl: "",
-					Error: NewError(err.Error()), // NewError is in pluginbase.config
-				}
-			return nil
+	// Use DecodeJSONArgs
+	if err := DecodeJSONArgs(args, &pigenStepsFile); err != nil {
+		*resp = ActionRequired{
+			ActionUrl: "",
+			Error:     NewError(err.Error()), // NewError is in pluginbase.config
+		}
+		return nil
 	}
-	
+
 	actionRequired := s.Impl.ConnectRepo(pigenStepsFile)
 	if actionRequired.Error != nil {
 		*resp = ActionRequired{
 			ActionUrl: "",
-			Error: NewError(actionRequired.Error.Error()), // NewError is in pluginbase.config
+			Error:     NewError(actionRequired.Error.Error()), // NewError is in pluginbase.config
 		}
 	} else {
 			*resp = actionRequired
@@ -103,38 +100,45 @@ func (s *CicdRPCServer) ConnectRepo(args JSONArgs, resp *ActionRequired) error {
 	return nil
 }
 
-func (s *CicdRPCServer) CreateTrigger(args JSONArgs, resp *error) error{
+func (s *CicdRPCServer) CreateTrigger(args JSONArgs, resp *error) error { // Note: resp is *error, should be *CustomError for consistency
 	var pigenStepsFile PigenStepsFile
-	if err := json.Unmarshal([]byte(args.Data), &pigenStepsFile); err != nil {
-			*resp = NewError(err.Error()) // NewError is in pluginbase.config
-			return nil
+	// Use DecodeJSONArgs
+	if err := DecodeJSONArgs(args, &pigenStepsFile); err != nil {
+		// The resp type for this method is `*error`.
+		// We should assign a `*CustomError` to it, which implements the error interface.
+		customErr := NewError(err.Error()) // NewError is in pluginbase.config
+		*resp = customErr
+		return nil
 	}
-	err := s.Impl.CreateTrigger(pigenStepsFile)
-	if err != nil {
-		*resp = NewError(err.Error()) // NewError is in pluginbase.config
+	errFromImpl := s.Impl.CreateTrigger(pigenStepsFile)
+	if errFromImpl != nil {
+		customErr := NewError(errFromImpl.Error()) // NewError is in pluginbase.config
+		*resp = customErr
 	} else {
-			*resp = nil
+		*resp = nil
 	}
 	return nil
 }
 
-func (s *CicdRPCServer) GeneratScript(args JSONArgs, resp *CICDFile) error{
+func (s *CicdRPCServer) GenerateScript(args JSONArgs, resp *CICDFile) error { // Renamed
 	var pigenStepsFile PigenStepsFile
-	if err := json.Unmarshal([]byte(args.Data), &pigenStepsFile); err != nil {
-			*resp = CICDFile{
-				FileScript: nil,
-				Error: NewError(err.Error()), // NewError is in pluginbase.config
-			}
-			return nil
+	// Use DecodeJSONArgs
+	if err := DecodeJSONArgs(args, &pigenStepsFile); err != nil {
+		*resp = CICDFile{
+			FileScript: nil,
+			Error:      NewError(err.Error()), // NewError is in pluginbase.config
+		}
+		return nil
 	}
-	cicdFile := s.Impl.GeneratScript(pigenStepsFile)
+	// Call the renamed interface method
+	cicdFile := s.Impl.GenerateScript(pigenStepsFile)
 	if cicdFile.Error != nil {
 		*resp = CICDFile{
 			FileScript: nil,
-			Error: NewError(cicdFile.Error.Error()), // NewError is in pluginbase.config
+			Error:      NewError(cicdFile.Error.Error()), // NewError is in pluginbase.config
 		}
 	} else {
-			*resp = cicdFile
+		*resp = cicdFile
 	}
 	return nil
 }

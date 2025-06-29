@@ -2,14 +2,14 @@ package pluginbase
 
 type PluginStruct struct {
 	ID string `yaml:"id" json:"id"`
-	RepoUrl string `yaml:"repo_url" json:"repo_url"`
+	RepoURL string `yaml:"repo_url" json:"repo_url"` // Field renamed
 	Version string `yaml:"version" json:"version"`
 	Plugin Plugin `yaml:"plugin" json:"plugin"`
 }
 
 type Plugin struct {
 	Label string `yaml:"label" json:"label"`
-  // You can redefine your Config or Output 
+  // You can redefine your Config or Output
 	Config map[string]any `yaml:"config" json:"config"`
 	Output map[string]any `yaml:"output" json:"output"`
 }

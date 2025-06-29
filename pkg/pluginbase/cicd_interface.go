@@ -9,7 +9,7 @@ type CicdInterface interface {
 	CreateTrigger(pigenStepsFile PigenStepsFile) error
 
 	// Generate pipeline script
-	GeneratScript(pigenStepsFile PigenStepsFile) CICDFile
+	GenerateScript(pigenStepsFile PigenStepsFile) CICDFile // Method name corrected
 
 	//TODO: Return service account to give it access to deployed plugins
 }

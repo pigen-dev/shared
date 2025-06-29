@@ -3,6 +3,7 @@ package pluginbase
 import (
 	"encoding/gob"
 	"encoding/json"
+	"fmt" // Added for error wrapping
 
 	"github.com/hashicorp/go-plugin"
 )
@@ -37,18 +38,20 @@ var Handshake = plugin.HandshakeConfig{
 	MagicCookieValue: "hello",
 }
 
-func GobEncode(args any) (JSONArgs, error) {
+// EncodeJSONArgs marshals the given arguments into JSONArgs.
+func EncodeJSONArgs(args any) (JSONArgs, error) {
 	jsonData, err := json.Marshal(args)
 	if err != nil {
-		return JSONArgs{}, err
+		return JSONArgs{}, fmt.Errorf("EncodeJSONArgs: failed to marshal data to JSON: %w", err)
 	}
 	return JSONArgs{Data: string(jsonData)}, nil
 }
 
-func GobDecode(data JSONArgs, out any) error {
+// DecodeJSONArgs unmarshals data from JSONArgs into the provided 'out' interface.
+func DecodeJSONArgs(data JSONArgs, out any) error {
 	err := json.Unmarshal([]byte(data.Data), out)
 	if err != nil {
-		return err
+		return fmt.Errorf("DecodeJSONArgs: failed to unmarshal JSON data: %w", err)
 	}
 	return nil
 }

@@ -3,7 +3,7 @@ package pluginbase
 type PigenStepsFile struct {
 	Type string `yaml:"type" json:"type"`
 	Version string `yaml:"version" json:"version"`
-	RepoUrl string `yaml:"repo_url" json:"repo_url"`
+	RepoURL string `yaml:"repo_url" json:"repo_url"` // Field renamed
 	Config map[string]any `yaml:"config" json:"config"`
 	Steps []Step `yaml:"steps" json:"steps"`
 }
@@ -14,7 +14,7 @@ type Step struct {
 }
 
 type ActionRequired struct {
-	ActionUrl string
+	ActionURL string // Field renamed
 	Error error
 }
 
